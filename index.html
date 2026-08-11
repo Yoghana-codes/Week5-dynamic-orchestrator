@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pet Agent Orchestrator</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #101b2d;
+      --panel-2: #16253b;
+      --text: #f4f7fb;
+      --muted: #9fb0c8;
+      --accent: #7c9cff;
+      --accent-2: #4dd3c5;
+      --cat: #ff8ab5;
+      --dog: #ffd166;
+      --bird: #6ee7ff;
+      --border: rgba(255,255,255,0.12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #ffd6e0 0%, #ffe7b3 24%, #dff7c7 48%, #cfeeff 72%, #e8d7ff 100%);
+      color: var(--text);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      background-image: radial-gradient(rgba(255,255,255,0.45) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.3;
+    }
+
+    body::after {
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="rgba(0,0,0,0.08)" d="M30 25c-6 0-11 5-11 11 0 6 5 11 11 11 6 0 11-5 11-11 0-6-5-11-11-11zm40 0c-6 0-11 5-11 11 0 6 5 11 11 11 6 0 11-5 11-11 0-6-5-11-11-11zM20 55c-8 0-14 6-14 14 0 8 6 14 14 14 8 0 14-6 14-14 0-8-6-14-14-14zm60 0c-8 0-14 6-14 14 0 8 6 14 14 14 8 0 14-6 14-14 0-8-6-14-14-14z"/></svg>');
+      background-repeat: repeat;
+      background-size: 140px 140px;
+      opacity: 0.18;
+    }
+
+    .page {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .sparkle {
+      position: fixed;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 0 8px rgba(255,255,255,0.9);
+      pointer-events: none;
+      animation: drift 8s linear infinite;
+      opacity: 0.75;
+      z-index: 0;
+    }
+
+    @keyframes drift {
+      0% { transform: translate3d(0, 0, 0); opacity: 0.2; }
+      25% { opacity: 0.9; }
+      50% { transform: translate3d(-120px, 20px, 0); opacity: 0.7; }
+      75% { opacity: 0.9; }
+      100% { transform: translate3d(-220px, -20px, 0); opacity: 0.2; }
+    }
+
+    .paw-print {
+      position: absolute;
+      opacity: 0.16;
+      font-size: 2rem;
+      pointer-events: none;
+    }
+
+    .paw-print.one { top: 20px; left: 20px; transform: rotate(-12deg); }
+    .paw-print.two { top: 32px; right: 24px; transform: rotate(15deg); }
+
+    header {
+      text-align: center;
+      padding: 8px 0 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      color: #8b5e3c;
+    }
+
+    header p {
+      margin: 0 auto;
+      max-width: 840px;
+      line-height: 1.6;
+      color: #9a6d49;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) 1.25fr minmax(280px, 360px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.09));
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.22);
+      backdrop-filter: blur(14px);
+      position: relative;
+      overflow: hidden;
+      color: #2f3347;
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(255,255,255,0.08), transparent 45%, rgba(255,255,255,0.04));
+      pointer-events: none;
+    }
+
+    .panel h2 {
+      margin: 0 0 16px;
+      font-size: 1.15rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #3f3b68;
+      font-weight: 800;
+    }
+
+    .left-panel .agent-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .agent-card strong { display: block; margin-bottom: 8px; font-size: 1rem; }
+    .agent-card small { color: var(--muted); display: block; margin-bottom: 10px; }
+    .animal-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      margin-right: 8px;
+      font-size: 1rem;
+      background: rgba(255,255,255,0.12);
+      vertical-align: middle;
+    }
+    .agent-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    .status-pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(139,94,60,0.14);
+      border: 1px solid rgba(139,94,60,0.24);
+      font-size: 0.86rem;
+      color: #8b5e3c;
+    }
+    .toggle-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 0.16s ease;
+    }
+    .toggle-btn:hover { transform: translateY(-1px); }
+    .toggle-btn.on { background: var(--accent-2); color: #052323; }
+    .toggle-btn.off { background: #f36f6f; color: #2b0909; }
+
+    .ask-box {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .ask-box input {
+      flex: 1 1 180px;
+      padding: 12px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: #2f2a24;
+      outline: none;
+    }
+    .ask-box button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .middle-panel .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .result-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 14px;
+    }
+    .result-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+    .result-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .right-panel .trace-list { display: flex; flex-direction: column; gap: 10px; }
+    .trace-item {
+      padding: 12px 13px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #1f3c78;
+    }
+    .trace-item small { color: #4b5f84; display: block; margin-top: 6px; }
+    .trace-tag {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #8b5e3c;
+    }
+    .trace-cat { background: rgba(255,138,181,0.22); color: #ffd6e8; }
+    .trace-dog { background: rgba(255,209,102,0.22); color: #ffecc4; }
+    .trace-bird { background: rgba(110,231,255,0.22); color: #dffbff; }
+    .trace-system { background: rgba(124,156,255,0.22); color: #e8eeff; }
+
+    .empty-state {
+      color: var(--muted);
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px dashed rgba(255,255,255,0.12);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1080px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="sparkle" style="top: 8%; left: 95%; animation-delay: 0s;"></div>
+    <div class="sparkle" style="top: 18%; left: 90%; animation-delay: 1.5s;"></div>
+    <div class="sparkle" style="top: 32%; left: 97%; animation-delay: 2.5s;"></div>
+    <div class="sparkle" style="top: 48%; left: 89%; animation-delay: 3.2s;"></div>
+    <div class="sparkle" style="top: 62%; left: 95%; animation-delay: 4.4s;"></div>
+    <div class="sparkle" style="top: 78%; left: 91%; animation-delay: 5.1s;"></div>
+    <div class="sparkle" style="top: 88%; left: 96%; animation-delay: 6.2s;"></div>
+    <div class="sparkle" style="top: 14%; left: 8%; animation-delay: 0.8s;"></div>
+    <div class="sparkle" style="top: 28%; left: 12%; animation-delay: 1.9s;"></div>
+    <div class="sparkle" style="top: 44%; left: 6%; animation-delay: 2.8s;"></div>
+    <div class="sparkle" style="top: 58%; left: 14%; animation-delay: 4.1s;"></div>
+    <div class="sparkle" style="top: 76%; left: 7%; animation-delay: 5.7s;"></div>
+    <div class="sparkle" style="top: 90%; left: 11%; animation-delay: 6.8s;"></div>
+    <header>
+      <span class="paw-print one">🐾</span>
+      <span class="paw-print two">🐾</span>
+      <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:rgba(139,94,60,0.14);border:1px solid rgba(139,94,60,0.24);margin-bottom:12px;font-weight:700;letter-spacing:0.04em;color:#8b5e3c;">Ask me a pet question</div>
+      <h1>Pet Agent Orchestrator</h1>
+      <p>Choose your agents on the left, watch them collaborate in the middle, and follow the workflow trail on the right.</p>
+    </header>
+
+    <div class="workspace">
+      <section class="panel left-panel" aria-labelledby="controls-title">
+        <h2 id="controls-title">Agent Buttons</h2>
+
+        <div class="agent-card" id="cat-card">
+          <strong><span class="animal-icon">🐱</span>Cat Agent</strong>
+          <small>Curious, cozy, and full of cat wisdom.</small>
+          <div class="agent-controls">
+            <span class="status-pill" id="cat-status">OFF</span>
+            <button class="toggle-btn on" data-agent="cat">ON</button>
+            <button class="toggle-btn off" data-agent="cat">OFF</button>
+          </div>
+        </div>
+
+        <div class="agent-card" id="dog-card">
+          <strong><span class="animal-icon">🐶</span>Dog Agent</strong>
+          <small>Playful, energetic, and always ready to help.</small>
+          <div class="agent-controls">
+            <span class="status-pill" id="dog-status">OFF</span>
+            <button class="toggle-btn on" data-agent="dog">ON</button>
+            <button class="toggle-btn off" data-agent="dog">OFF</button>
+          </div>
+        </div>
+
+        <div class="agent-card" id="parakeet-card">
+          <strong><span class="animal-icon">🦜</span>Parakeet Agent</strong>
+          <small>Bright, cheerful, and full of bird-brained charm.</small>
+          <div class="agent-controls">
+            <span class="status-pill" id="parakeet-status">OFF</span>
+            <button class="toggle-btn on" data-agent="parakeet">ON</button>
+            <button class="toggle-btn off" data-agent="parakeet">OFF</button>
+          </div>
+        </div>
+
+        <div class="ask-box">
+          <input id="question-input" type="text" placeholder="Ask your pet team..." aria-label="Ask a pet team question">
+          <button id="ask-button">Run Team</button>
+        </div>
+      </section>
+
+      <section class="panel middle-panel" aria-labelledby="results-title">
+        <h2 id="results-title">Agent Results</h2>
+        <div class="results-list" id="results-list">
+          <div class="empty-state">Turn on your agents and ask a question to see the teamwork unfold here.</div>
+        </div>
+      </section>
+
+      <section class="panel right-panel" aria-labelledby="trace-title">
+        <h2 id="trace-title">Workflow Trace</h2>
+        <div class="trace-list" id="trace-log">
+          <div class="trace-item trace-system">
+            <div class="trace-tag">system</div>
+            <div style="color:#1f3c78;">Orchestrator is ready.</div>
+            <small style="color:#4b5f84;">Choose agents and send a message.</small>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    class Agent {
+      constructor(name, colorClass, personality, answerFn, fallbackResponse) {
+        this.name = name;
+        this.colorClass = colorClass;
+        this.personality = personality;
+        this.active = false;
+        this.answerFn = answerFn;
+        this.fallbackResponse = fallbackResponse;
+      }
+
+      respond(input, previousOutput = '') {
+        const answer = this.answerFn(input, previousOutput);
+        return answer ?? this.fallbackResponse;
+      }
+    }
+
+    class PetAgentOrchestrator {
+      constructor(agents) {
+        this.agents = agents;
+      }
+
+      setAgentState(agentKey, value) {
+        const agent = this.agents[agentKey];
+        if (!agent) return;
+        agent.active = value;
+        this.logTrace(`Agent turned ${value ? 'ON' : 'OFF'}`, agent.name, 'system');
+      }
+
+      async runAgents(question) {
+        const trimmed = question.trim();
+        if (!trimmed) {
+          this.logTrace('Skipped empty question.', 'system', 'system');
+          return;
+        }
+
+        this.logTrace(`Question: ${trimmed}`, 'system', 'system');
+        const activeAgents = Object.values(this.agents).filter(agent => agent.active);
+        const resultsList = document.getElementById('results-list');
+        resultsList.innerHTML = '';
+
+        if (activeAgents.length === 0) {
+          this.logTrace('No agents are on yet.', 'system', 'system');
+          resultsList.innerHTML = '<div class="empty-state">Turn on at least one agent to begin.</div>';
+          return;
+        }
+
+        const match = this.findBestAgent(trimmed);
+        let previousOutput = '';
+        let hadValidAgent = false;
+
+        for (const agent of activeAgents) {
+          const isRelevant = this.isAgentRelevant(agent, trimmed, match);
+          this.logTrace(`Passing message to ${agent.name} agent`, agent.name, agent.colorClass);
+
+          if (!isRelevant) {
+            this.renderResult(agent, 'I cannot think of an answer.');
+            continue;
+          }
+
+          const response = await this.callModel(agent, trimmed, previousOutput, isRelevant);
+          previousOutput = response;
+          this.renderResult(agent, response);
+          hadValidAgent = true;
+        }
+
+        if (!hadValidAgent) {
+          this.logTrace('No active agent can answer this question.', 'system', 'system');
+          this.renderResult({ name: 'System' }, 'I cannot think of an answer.');
+        }
+
+        this.logTrace('Workflow complete.', 'system', 'system');
+      }
+
+      findBestAgent(question) {
+        const text = question.toLowerCase();
+        const catKeywords = ['cat', 'cats', 'kitten', 'kittens', 'kitty', 'kitties', 'feline', 'whisker', 'whiskers', 'purr', 'purring', 'knead', 'kneading', 'litter', 'meow', 'meows', 'scratch', 'scratching'];
+        const dogKeywords = ['dog', 'dogs', 'puppy', 'puppies', 'puppyhood', 'bark', 'barking', 'walk', 'walking', 'fetch', 'chew', 'chewing', 'tail', 'tails', 'leash', 'leashes'];
+        const birdKeywords = ['bird', 'birds', 'parakeet', 'parakeets', 'baby parakeet', 'baby parakeets', 'chirp', 'chirping', 'feather', 'feathers', 'wing', 'wings', 'tweet', 'tweeting', 'cage', 'cages', 'seed', 'seeds'];
+
+        if (catKeywords.some(keyword => text.includes(keyword))) return 'cat';
+        if (dogKeywords.some(keyword => text.includes(keyword))) return 'dog';
+        if (birdKeywords.some(keyword => text.includes(keyword))) return 'bird';
+        return null;
+      }
+
+      isAgentRelevant(agent, question, match) {
+        const agentKey = agent.name.toLowerCase();
+        if (!match) {
+          return false;
+        }
+        if (agentKey.includes('cat') && match === 'cat') return true;
+        if (agentKey.includes('dog') && match === 'dog') return true;
+        if (agentKey.includes('bird') && match === 'bird') return true;
+        return false;
+      }
+
+      async callModel(agent, message, previousOutput, isRelevant) {
+        const prompt = `You are the ${agent.name} agent with this personality: ${agent.personality}.\nAnswer only if the user question is clearly about ${agent.name.toLowerCase() === 'cat' ? 'cats and kittens' : agent.name.toLowerCase() === 'dog' ? 'dogs and puppies' : 'parakeets and baby parakeets'}.\nIf the question is not about your pet family, say exactly: I cannot think of an answer.\nIf the question cannot be assigned to any pet agent, say exactly: I cannot think of an answer.\nUser message: ${message}\nPrevious output: ${previousOutput || 'None'}`;
+
+        try {
+          const response = await fetch('https://vibe-proxy-gqv4.onrender.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer sk-vibe-summer-2026'
+            },
+            body: JSON.stringify({
+              model: 'class-chat-model',
+              messages: [{ role: 'user', content: prompt }]
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`Request failed with ${response.status}`);
+          }
+
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content || '';
+          if (!isRelevant) {
+            return 'I cannot think of an answer.';
+          }
+          return content.trim() || 'I cannot think of an answer.';
+        } catch (error) {
+          this.logTrace(`Model call failed: ${error.message}`, 'system', 'system');
+          return 'I cannot think of an answer.';
+        }
+      }
+
+      renderResult(agent, message) {
+        const resultsList = document.getElementById('results-list');
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        card.innerHTML = `<strong>${agent.name} agent</strong><p>${message}</p>`;
+        resultsList.appendChild(card);
+      }
+
+      logTrace(message, actor, style) {
+        const traceLog = document.getElementById('trace-log');
+        const item = document.createElement('div');
+        item.className = `trace-item trace-${style}`;
+        item.innerHTML = `
+          <div class="trace-tag">${actor}</div>
+          <div>${message}</div>
+          <small>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</small>
+        `;
+        traceLog.prepend(item);
+      }
+    }
+
+    const petAgent = new PetAgentOrchestrator({
+      cat: new Agent('Cat', 'cat', 'Warm, cozy, and gently insightful.', question => `Cat reply: ${question}`, 'The cat agent is ready to help with whiskers, naps, and kitty habits.'),
+      dog: new Agent('Dog', 'dog', 'Energetic, playful, and optimistic.', question => `Dog reply: ${question}`, 'The dog agent is ready to help with walks, fetch, and puppy love.'),
+      parakeet: new Agent('Parakeet', 'bird', 'Bright, whimsical, and cheerful.', question => `Parakeet reply: ${question}`, 'The parakeet agent is ready to help with chirps, songs, and feathered fun.')
+    });
+
+    document.querySelectorAll('.toggle-btn').forEach(button => {
+      button.addEventListener('click', event => {
+        const target = event.currentTarget;
+        const agentKey = target.dataset.agent;
+        const isOn = target.classList.contains('on');
+        petAgent.setAgentState(agentKey, isOn);
+        document.getElementById(`${agentKey}-status`).textContent = isOn ? 'ON' : 'OFF';
+      });
+    });
+
+    document.getElementById('ask-button').addEventListener('click', async () => {
+      const input = document.getElementById('question-input');
+      await petAgent.runAgents(input.value);
+      input.value = '';
+    });
+
+    document.getElementById('question-input').addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        document.getElementById('ask-button').click();
+      }
+    });
+  </script>
+</body>
+</html>
